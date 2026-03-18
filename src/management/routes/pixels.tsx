@@ -139,6 +139,8 @@ pixelRoutes.get("/:id", async (c) => {
       uaBrowser: opens.uaBrowser,
       uaOs: opens.uaOs,
       uaDevice: opens.uaDevice,
+      geoCountry: opens.geoCountry,
+      geoCity: opens.geoCity,
     })
     .from(opens)
     .where(eq(opens.pixelId, id))

@@ -5,6 +5,7 @@ import { pixels, opens, unmatchedRequests } from "../db/schema";
 import { eq, count } from "drizzle-orm";
 import { parseUA } from "../services/ua";
 import { sendNotification, type NotifyPayload } from "../services/notify";
+import { lookupIp } from "../services/geo";
 import { providers } from "../db/schema";
 import type { Server } from "bun";
 
@@ -141,6 +142,7 @@ trackerApp.get("/px/:filename", (c) => {
 
       if (pixel) {
         const ua = parseUA(req.userAgent);
+        const geo = await lookupIp(req.ip);
         const now = Date.now();
 
         await db.insert(opens).values({
@@ -157,6 +159,9 @@ trackerApp.get("/px/:filename", (c) => {
           rawHeaders: req.rawHeaders,
           rawUrl: req.rawUrl,
           rawMethod: req.rawMethod,
+          geoCountry: geo.country,
+          geoCity: geo.city,
+          geoRegion: geo.region,
         });
 
         // Check if notification should fire
@@ -179,10 +184,12 @@ trackerApp.get("/px/:filename", (c) => {
             const isFirstOpen = totalOpens === 1;
 
             if (isFirstOpen || pixel.notifyOnEveryOpen) {
+              const locationParts = [geo.city, geo.region, geo.country].filter(Boolean);
               const payload: NotifyPayload = {
                 pixelName: pixel.name,
                 recipientHint: pixel.recipientHint,
                 ip: req.ip,
+                location: locationParts.length > 0 ? locationParts.join(", ") : null,
                 browser: ua.browser || "Unknown",
                 os: ua.os || "Unknown",
                 totalOpens,

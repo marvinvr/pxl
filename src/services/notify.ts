@@ -2,6 +2,7 @@ export interface NotifyPayload {
   pixelName: string;
   recipientHint: string | null;
   ip: string;
+  location: string | null;
   browser: string;
   os: string;
   totalOpens: number;
@@ -26,10 +27,13 @@ function formatMessage(payload: NotifyPayload): string {
   const lines = [
     `📬 PXL Alert: ${payload.pixelName}`,
     `IP: ${payload.ip}`,
+  ];
+  if (payload.location) lines.push(`Location: ${payload.location}`);
+  lines.push(
     `Time: ${formatTime(payload.timestamp)}`,
     `OS: ${payload.os}`,
     `Opens: ${payload.totalOpens}`,
-  ];
+  );
   return lines.join("\n");
 }
 
@@ -111,6 +115,7 @@ export async function sendTestNotification(
     pixelName: "Test Pixel",
     recipientHint: "test@example.com",
     ip: "127.0.0.1",
+    location: "Test City, Test Country",
     browser: "Test Browser",
     os: "Test OS",
     totalOpens: 1,

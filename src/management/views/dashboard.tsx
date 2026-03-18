@@ -21,6 +21,8 @@ interface DashboardProps {
     ip: string | null;
     uaBrowser: string | null;
     uaOs: string | null;
+    geoCountry: string | null;
+    geoCity: string | null;
   }[];
   recentUnmatched: UnmatchedItem[];
 }
@@ -54,24 +56,29 @@ export const DashboardView: FC<DashboardProps> = (props) => {
                 <th class="px-6 py-3 font-medium">Time</th>
                 <th class="px-6 py-3 font-medium">Pixel</th>
                 <th class="px-6 py-3 font-medium">IP</th>
+                <th class="px-6 py-3 font-medium">Location</th>
                 <th class="px-6 py-3 font-medium">Browser</th>
                 <th class="px-6 py-3 font-medium">OS</th>
               </tr>
             </thead>
             <tbody>
-              {props.recentOpens.map((o) => (
-                <tr class="border-b border-gray-100">
-                  <td class="px-6 py-3 text-sm font-mono">
-                    <a href={`/opens/${o.id}`} class="text-blue-600 hover:text-blue-800">
-                      {new Date(o.timestamp).toLocaleString()}
-                    </a>
-                  </td>
-                  <td class="px-6 py-3 text-sm">{o.pixelName}</td>
-                  <td class="px-6 py-3 text-sm font-mono text-gray-500">{o.ip || "—"}</td>
-                  <td class="px-6 py-3 text-sm text-gray-500">{o.uaBrowser || "—"}</td>
-                  <td class="px-6 py-3 text-sm text-gray-500">{o.uaOs || "—"}</td>
-                </tr>
-              ))}
+              {props.recentOpens.map((o) => {
+                const location = [o.geoCity, o.geoCountry].filter(Boolean).join(", ");
+                return (
+                  <tr class="border-b border-gray-100">
+                    <td class="px-6 py-3 text-sm font-mono">
+                      <a href={`/opens/${o.id}`} class="text-blue-600 hover:text-blue-800">
+                        {new Date(o.timestamp).toLocaleString()}
+                      </a>
+                    </td>
+                    <td class="px-6 py-3 text-sm">{o.pixelName}</td>
+                    <td class="px-6 py-3 text-sm font-mono text-gray-500">{o.ip || "—"}</td>
+                    <td class="px-6 py-3 text-sm text-gray-500">{location || "—"}</td>
+                    <td class="px-6 py-3 text-sm text-gray-500">{o.uaBrowser || "—"}</td>
+                    <td class="px-6 py-3 text-sm text-gray-500">{o.uaOs || "—"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

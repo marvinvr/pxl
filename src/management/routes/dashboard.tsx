@@ -25,6 +25,8 @@ dashboardRoutes.get("/", async (c) => {
           ip: opens.ip,
           uaBrowser: opens.uaBrowser,
           uaOs: opens.uaOs,
+          geoCountry: opens.geoCountry,
+          geoCity: opens.geoCity,
         })
         .from(opens)
         .orderBy(desc(opens.timestamp))

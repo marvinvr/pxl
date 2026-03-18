@@ -45,6 +45,9 @@ export const opens = sqliteTable(
     rawHeaders: text("raw_headers"),
     rawUrl: text("raw_url"),
     rawMethod: text("raw_method"),
+    geoCountry: text("geo_country"),
+    geoCity: text("geo_city"),
+    geoRegion: text("geo_region"),
   },
   (table) => [
     index("opens_pixel_id_idx").on(table.pixelId),

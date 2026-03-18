@@ -17,6 +17,9 @@ interface OpenDetailProps {
     rawHeaders: string | null;
     rawUrl: string | null;
     rawMethod: string | null;
+    geoCountry: string | null;
+    geoCity: string | null;
+    geoRegion: string | null;
   };
   openNumber: number;
 }
@@ -50,6 +53,7 @@ export const OpenDetailView: FC<OpenDetailProps> = ({ open, openNumber }) => {
         {/* Connection */}
         <Section title="Connection">
           <InfoRow label="IP" value={open.ip} mono />
+          <InfoRow label="Location" value={[open.geoCity, open.geoRegion, open.geoCountry].filter(Boolean).join(", ") || null} />
           <InfoRow label="Referer" value={open.referer} />
         </Section>
 

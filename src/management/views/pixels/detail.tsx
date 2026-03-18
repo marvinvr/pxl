@@ -19,6 +19,8 @@ interface PixelDetailProps {
     uaBrowser: string | null;
     uaOs: string | null;
     uaDevice: string | null;
+    geoCountry: string | null;
+    geoCity: string | null;
   }[];
 }
 
@@ -112,26 +114,31 @@ export const PixelDetailView: FC<PixelDetailProps> = ({ pixel, opens }) => {
                 <th class="px-6 py-3 font-medium">#</th>
                 <th class="px-6 py-3 font-medium">Timestamp</th>
                 <th class="px-6 py-3 font-medium">IP</th>
+                <th class="px-6 py-3 font-medium">Location</th>
                 <th class="px-6 py-3 font-medium">Browser</th>
                 <th class="px-6 py-3 font-medium">OS</th>
                 <th class="px-6 py-3 font-medium">Device</th>
               </tr>
             </thead>
             <tbody>
-              {opens.map((o, idx) => (
-                <tr class="border-b border-gray-100">
-                  <td class="px-6 py-3 text-sm font-mono text-gray-400">{idx + 1}</td>
-                  <td class="px-6 py-3 text-sm font-mono">
-                    <a href={`/opens/${o.id}`} class="text-blue-600 hover:text-blue-800">
-                      {new Date(o.timestamp).toLocaleString()}
-                    </a>
-                  </td>
-                  <td class="px-6 py-3 text-sm font-mono text-gray-500">{o.ip || "—"}</td>
-                  <td class="px-6 py-3 text-sm text-gray-500">{o.uaBrowser || "—"}</td>
-                  <td class="px-6 py-3 text-sm text-gray-500">{o.uaOs || "—"}</td>
-                  <td class="px-6 py-3 text-sm text-gray-500">{o.uaDevice || "—"}</td>
-                </tr>
-              ))}
+              {opens.map((o, idx) => {
+                const location = [o.geoCity, o.geoCountry].filter(Boolean).join(", ");
+                return (
+                  <tr class="border-b border-gray-100">
+                    <td class="px-6 py-3 text-sm font-mono text-gray-400">{idx + 1}</td>
+                    <td class="px-6 py-3 text-sm font-mono">
+                      <a href={`/opens/${o.id}`} class="text-blue-600 hover:text-blue-800">
+                        {new Date(o.timestamp).toLocaleString()}
+                      </a>
+                    </td>
+                    <td class="px-6 py-3 text-sm font-mono text-gray-500">{o.ip || "—"}</td>
+                    <td class="px-6 py-3 text-sm text-gray-500">{location || "—"}</td>
+                    <td class="px-6 py-3 text-sm text-gray-500">{o.uaBrowser || "—"}</td>
+                    <td class="px-6 py-3 text-sm text-gray-500">{o.uaOs || "—"}</td>
+                    <td class="px-6 py-3 text-sm text-gray-500">{o.uaDevice || "—"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
