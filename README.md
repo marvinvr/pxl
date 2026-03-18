@@ -24,8 +24,8 @@ Management UI at `http://localhost:4000`.
 | Variable | Default | Description |
 |---|---|---|
 | `PXL_DATA_DIR` | `./data` | SQLite database location |
-| `PXL_MGMT_PORT` | `4000` | Management UI port |
-| `PXL_TRACKER_PORT` | `4001` | Pixel server port |
+| `PXL_MGMT_PORT` | `3000` | Management UI port |
+| `PXL_TRACKER_PORT` | `3001` | Pixel server port |
 | `PXL_BASE_URL` | **required** | Public URL for pixel links |
 
 ## Notification Providers
