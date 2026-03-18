@@ -1,0 +1,21 @@
+{
+  "name": "pxl",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/entrypoint.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "hono": "^4",
+    "drizzle-orm": "^0.39",
+    "nanoid": "^5",
+    "ua-parser-js": "^2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30",
+    "@types/bun": "latest"
+  }
+}

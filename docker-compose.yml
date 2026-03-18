@@ -1,0 +1,12 @@
+services:
+  pxl:
+    build: .
+    container_name: pxl
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PXL_MGMT_PORT:-4000}:${PXL_MGMT_PORT:-4000}"
+      - "${PXL_TRACKER_PORT:-4001}:${PXL_TRACKER_PORT:-4001}"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
