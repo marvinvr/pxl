@@ -1,11 +1,13 @@
 import type { FC } from "hono/jsx";
 import { Layout } from "../layout";
+import { IpLink } from "../ip-link";
 
 interface UnmatchedDetailProps {
   request: {
     id: string;
     timestamp: number;
     requestedPath: string;
+    ipAddressId: number | null;
     ip: string | null;
     userAgent: string | null;
     referer: string | null;
@@ -33,7 +35,12 @@ export const UnmatchedDetailView: FC<UnmatchedDetailProps> = ({ request }) => {
         <div class="bg-white border border-gray-200 rounded-md p-4">
           <div class="space-y-3">
             <InfoRow label="Path" value={request.requestedPath} mono />
-            <InfoRow label="IP" value={request.ip} mono />
+            <div class="flex flex-col sm:flex-row sm:items-start gap-1">
+              <div class="text-sm font-mono text-gray-400 w-32 shrink-0">IP</div>
+              <div class="text-sm font-mono text-gray-700">
+                <IpLink ipAddressId={request.ipAddressId} ip={request.ip} stopPropagation={false} />
+              </div>
+            </div>
             <InfoRow label="User-Agent" value={request.userAgent} mono small />
             <InfoRow label="Referer" value={request.referer} />
           </div>
@@ -67,7 +74,7 @@ const InfoRow: FC<{ label: string; value: string | null | undefined; mono?: bool
     <div
       class={`text-sm ${mono ? "font-mono" : ""} ${small ? "text-xs" : ""} text-gray-700 break-all`}
     >
-      {value || "—"}
+      {value || "\u2014"}
     </div>
   </div>
 );

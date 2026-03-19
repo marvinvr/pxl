@@ -1,87 +1,114 @@
 import type { FC } from "hono/jsx";
 import { Layout } from "./layout";
+import { Btn } from "./button";
+import { TypeBadge } from "./type-badge";
+import { IpLink } from "./ip-link";
+import { DataTable } from "./data-table";
 
 interface UnmatchedItem {
   id: string;
   timestamp: number;
   requestedPath: string;
+  ipAddressId: number | null;
   ip: string | null;
   userAgent: string | null;
 }
 
+interface ActivityItem {
+  type: "open" | "click";
+  id: string;
+  timestamp: number;
+  name: string;
+  ipAddressId: number | null;
+  ip: string | null;
+  uaBrowser: string | null;
+  uaOs: string | null;
+  geoCountry: string | null;
+  geoCity: string | null;
+}
+
 interface DashboardProps {
-  totalPixels: number;
-  opensToday: number;
-  opensAllTime: number;
-  unmatchedToday: number;
-  recentOpens: {
-    id: string;
-    timestamp: number;
-    pixelName: string;
-    ip: string | null;
-    uaBrowser: string | null;
-    uaOs: string | null;
-    geoCountry: string | null;
-    geoCity: string | null;
-  }[];
+  trackedItems: number;
+  activityToday: number;
+  activityAllTime: number;
+  unmatchedTotal: number;
+  recentActivity: ActivityItem[];
   recentUnmatched: UnmatchedItem[];
+  providers: { id: string; name: string }[];
 }
 
 export const DashboardView: FC<DashboardProps> = (props) => {
   return (
     <Layout title="Dashboard">
-      <div class="flex items-center justify-between mb-8">
-        <h1 class="text-2xl font-bold">Dashboard</h1>
-      </div>
-
       {/* Stats */}
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Pixels" value={props.totalPixels} />
-        <StatCard label="Opens Today" value={props.opensToday} />
-        <StatCard label="Opens All Time" value={props.opensAllTime} />
-        <StatCard label="Unmatched Today" value={props.unmatchedToday} accent />
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard label="Tracked" value={props.trackedItems} />
+        <StatCard label="Today" value={props.activityToday} />
+        <StatCard label="All Time" value={props.activityAllTime} />
+        <StatCard label="Unmatched" value={props.unmatchedTotal} />
       </div>
 
-      {/* Recent Opens */}
+      {/* Quick Shorten */}
+      <div class="bg-white border border-gray-200 rounded-md p-4 mb-8">
+        <h2 class="text-lg font-semibold mb-3">Quick Shorten</h2>
+        <form
+          hx-post="/links/quick"
+          hx-target="#quick-shorten-result"
+          hx-swap="innerHTML"
+        >
+          {props.providers.length > 0 && (
+            <input type="hidden" name="providerId" value={props.providers[0].id} />
+          )}
+          <input type="hidden" name="notifyOnEveryClick" value="1" />
+          <div class="flex gap-3">
+            <input
+              type="url"
+              name="targetUrl"
+              required
+              placeholder="Paste a URL to shorten"
+              class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <Btn type="submit" class="shrink-0">Shorten</Btn>
+          </div>
+        </form>
+        <div id="quick-shorten-result"></div>
+      </div>
+
+      {/* Recent Activity */}
       <div class="bg-white border border-gray-200 rounded-md overflow-hidden mb-8">
         <div class="px-6 py-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold">Recent Opens</h2>
+          <h2 class="text-lg font-semibold">Recent Activity</h2>
         </div>
-        {props.recentOpens.length === 0 ? (
-          <div class="px-6 py-8 text-center text-gray-400">No opens yet</div>
-        ) : (
-          <table class="w-full">
-            <thead>
-              <tr class="text-left text-xs font-mono uppercase tracking-wider text-gray-400 border-b border-gray-200">
-                <th class="px-6 py-3 font-medium">Time</th>
-                <th class="px-6 py-3 font-medium">Pixel</th>
-                <th class="px-6 py-3 font-medium">IP</th>
-                <th class="px-6 py-3 font-medium">Location</th>
-                <th class="px-6 py-3 font-medium">Browser</th>
-                <th class="px-6 py-3 font-medium">OS</th>
+        <DataTable
+          columns={["Time", "Type", "Name", "IP", "Location", "Browser", "OS"]}
+          empty="No activity yet"
+          pageSize={10}
+        >
+          {props.recentActivity.map((a) => {
+            const location = [a.geoCity, a.geoCountry].filter(Boolean).join(", ");
+            const detailUrl = a.type === "open" ? `/opens/${a.id}` : `/clicks/${a.id}`;
+            return (
+              <tr
+                class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                hx-get={detailUrl} hx-push-url="true" hx-target="body" hx-swap="innerHTML"
+              >
+                <td class="px-6 py-3 text-sm font-mono">
+                  {new Date(a.timestamp).toLocaleString()}
+                </td>
+                <td class="px-6 py-3 text-sm">
+                  <TypeBadge type={a.type} />
+                </td>
+                <td class="px-6 py-3 text-sm">{a.name}</td>
+                <td class="px-6 py-3 text-sm font-mono text-gray-500">
+                  <IpLink ipAddressId={a.ipAddressId} ip={a.ip} />
+                </td>
+                <td class="px-6 py-3 text-sm text-gray-500">{location || "\u2014"}</td>
+                <td class="px-6 py-3 text-sm text-gray-500">{a.uaBrowser || "\u2014"}</td>
+                <td class="px-6 py-3 text-sm text-gray-500">{a.uaOs || "\u2014"}</td>
               </tr>
-            </thead>
-            <tbody>
-              {props.recentOpens.map((o) => {
-                const location = [o.geoCity, o.geoCountry].filter(Boolean).join(", ");
-                return (
-                  <tr class="border-b border-gray-100">
-                    <td class="px-6 py-3 text-sm font-mono">
-                      <a href={`/opens/${o.id}`} class="text-blue-600 hover:text-blue-800">
-                        {new Date(o.timestamp).toLocaleString()}
-                      </a>
-                    </td>
-                    <td class="px-6 py-3 text-sm">{o.pixelName}</td>
-                    <td class="px-6 py-3 text-sm font-mono text-gray-500">{o.ip || "—"}</td>
-                    <td class="px-6 py-3 text-sm text-gray-500">{location || "—"}</td>
-                    <td class="px-6 py-3 text-sm text-gray-500">{o.uaBrowser || "—"}</td>
-                    <td class="px-6 py-3 text-sm text-gray-500">{o.uaOs || "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+            );
+          })}
+        </DataTable>
       </div>
 
       {/* Unmatched Requests */}
@@ -90,66 +117,51 @@ export const DashboardView: FC<DashboardProps> = (props) => {
           <div class="flex items-center gap-3">
             <h2 class="text-lg font-semibold">Unmatched Requests</h2>
             <span class="text-xs px-2 py-0.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded font-medium">
-              Pixel hits with no matching tracking ID
+              Hits with no matching ID
             </span>
           </div>
           <div class="flex items-center gap-2">
             <form method="POST" action="/unmatched/clear-old">
-              <button
-                type="submit"
-                onclick="return confirm('Clear requests older than 30 days?')"
-                class="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-xs text-gray-600 rounded transition-colors"
-              >
+              <Btn type="submit" variant="secondary" size="sm" onclick="return confirm('Clear requests older than 30 days?')">
                 Clear &gt; 30d
-              </button>
+              </Btn>
             </form>
             <form method="POST" action="/unmatched/clear-all">
-              <button
-                type="submit"
-                onclick="return confirm('Clear ALL unmatched requests?')"
-                class="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-xs text-red-600 border border-red-200 rounded transition-colors"
-              >
+              <Btn type="submit" variant="danger" size="sm" onclick="return confirm('Clear ALL unmatched requests?')">
                 Clear All
-              </button>
+              </Btn>
             </form>
           </div>
         </div>
-        {props.recentUnmatched.length === 0 ? (
-          <div class="px-6 py-6 text-center text-gray-400 text-sm">No unmatched requests</div>
-        ) : (
-          <table class="w-full">
-            <thead>
-              <tr class="text-left text-xs font-mono uppercase tracking-wider text-gray-400 border-b border-gray-200">
-                <th class="px-6 py-3 font-medium">Time</th>
-                <th class="px-6 py-3 font-medium">Path</th>
-                <th class="px-6 py-3 font-medium">IP</th>
-                <th class="px-6 py-3 font-medium">User-Agent</th>
-              </tr>
-            </thead>
-            <tbody>
-              {props.recentUnmatched.map((r) => (
-                <tr class="border-b border-gray-100">
-                  <td class="px-6 py-3 text-sm font-mono">
-                    <a href={`/unmatched/${r.id}`} class="text-yellow-700 hover:text-yellow-900">
-                      {new Date(r.timestamp).toLocaleString()}
-                    </a>
-                  </td>
-                  <td class="px-6 py-3 text-sm font-mono text-gray-600">{r.requestedPath}</td>
-                  <td class="px-6 py-3 text-sm font-mono text-gray-500">{r.ip || "—"}</td>
-                  <td class="px-6 py-3 text-sm text-gray-500 max-w-xs truncate">{r.userAgent || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable
+          columns={["Time", "Path", "IP", "User-Agent"]}
+          empty="No unmatched requests"
+          pageSize={5}
+        >
+          {props.recentUnmatched.map((r) => (
+            <tr
+              class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+              hx-get={`/unmatched/${r.id}`} hx-push-url="true" hx-target="body" hx-swap="innerHTML"
+            >
+              <td class="px-6 py-3 text-sm font-mono">
+                {new Date(r.timestamp).toLocaleString()}
+              </td>
+              <td class="px-6 py-3 text-sm font-mono text-gray-600">{r.requestedPath}</td>
+              <td class="px-6 py-3 text-sm font-mono text-gray-500">
+                <IpLink ipAddressId={r.ipAddressId} ip={r.ip} />
+              </td>
+              <td class="px-6 py-3 text-sm text-gray-500 max-w-xs truncate">{r.userAgent || "\u2014"}</td>
+            </tr>
+          ))}
+        </DataTable>
       </div>
     </Layout>
   );
 };
 
-const StatCard: FC<{ label: string; value: number; accent?: boolean }> = ({ label, value, accent }) => (
-  <div class={`bg-white border rounded-md p-4 ${accent && value > 0 ? "border-yellow-300" : "border-gray-200"}`}>
+const StatCard: FC<{ label: string; value: number }> = ({ label, value }) => (
+  <div class="bg-white border border-gray-200 rounded-md p-4">
     <div class="text-sm text-gray-500 mb-1">{label}</div>
-    <div class={`text-3xl font-bold font-mono ${accent && value > 0 ? "text-yellow-600" : ""}`}>{value}</div>
+    <div class="text-3xl font-bold font-mono">{value}</div>
   </div>
 );

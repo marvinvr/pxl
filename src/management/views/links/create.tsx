@@ -2,27 +2,37 @@ import type { FC } from "hono/jsx";
 import { Layout } from "../layout";
 import { Btn } from "../button";
 
-interface CreatePixelProps {
+interface CreateLinkProps {
   providers: { id: string; name: string }[];
 }
 
-export const CreatePixelView: FC<CreatePixelProps> = ({ providers }) => {
+export const CreateLinkView: FC<CreateLinkProps> = ({ providers }) => {
   return (
-    <Layout title="New Pixel">
+    <Layout title="New Link">
       <div class="mb-8">
-        <a href="/pixels" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">&larr; Back to Pixels</a>
-        <h1 class="text-2xl font-bold mt-2">New Pixel</h1>
+        <a href="/links" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">&larr; Back to Links</a>
+        <h1 class="text-2xl font-bold mt-2">New Link</h1>
       </div>
 
       <div class="bg-white border border-gray-200 rounded-md p-4 max-w-2xl">
-        <form method="POST" action="/pixels" class="space-y-5">
+        <form method="POST" action="/links" class="space-y-5">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Target URL *</label>
+            <input
+              type="url"
+              name="targetUrl"
+              required
+              placeholder="https://example.com/page"
+              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
             <input
               type="text"
               name="name"
-              required
-              placeholder="Follow-up to John"
+              placeholder="Auto-generated from URL if empty"
               class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -32,7 +42,7 @@ export const CreatePixelView: FC<CreatePixelProps> = ({ providers }) => {
             <textarea
               name="notes"
               rows={3}
-              placeholder="Optional notes about this pixel"
+              placeholder="Optional notes about this link"
               class="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -53,18 +63,18 @@ export const CreatePixelView: FC<CreatePixelProps> = ({ providers }) => {
           <div class="flex items-center gap-2">
             <input
               type="checkbox"
-              name="notifyOnEveryOpen"
-              id="notifyOnEveryOpen"
+              name="notifyOnEveryClick"
+              id="notifyOnEveryClick"
               value="1"
               checked
               class="rounded bg-white border-gray-300 text-gray-900 focus:ring-gray-500"
             />
-            <label for="notifyOnEveryOpen" class="text-sm text-gray-600">
-              Notify on every open (not just the first)
+            <label for="notifyOnEveryClick" class="text-sm text-gray-600">
+              Notify on every click (not just the first)
             </label>
           </div>
 
-          <Btn type="submit">Create Pixel</Btn>
+          <Btn type="submit">Create Link</Btn>
         </form>
       </div>
     </Layout>

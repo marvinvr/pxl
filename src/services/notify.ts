@@ -9,7 +9,18 @@ export interface NotifyPayload {
   timestamp: string;
 }
 
-type ProviderSender = (config: Record<string, any>, payload: NotifyPayload) => Promise<void>;
+export interface LinkNotifyPayload {
+  linkName: string;
+  targetUrl: string;
+  ip: string;
+  location: string | null;
+  browser: string;
+  os: string;
+  totalClicks: number;
+  timestamp: string;
+}
+
+type ProviderSender = (config: Record<string, any>, payload: NotifyPayload | LinkNotifyPayload) => Promise<void>;
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
@@ -23,18 +34,34 @@ function formatTime(iso: string): string {
   });
 }
 
-function formatMessage(payload: NotifyPayload): string {
-  const lines = [
-    `📬 PXL Alert: ${payload.pixelName}`,
-    `IP: ${payload.ip}`,
-  ];
-  if (payload.location) lines.push(`Location: ${payload.location}`);
-  lines.push(
-    `Time: ${formatTime(payload.timestamp)}`,
-    `OS: ${payload.os}`,
-    `Opens: ${payload.totalOpens}`,
-  );
-  return lines.join("\n");
+function formatMessage(payload: NotifyPayload | LinkNotifyPayload): string {
+  if ("pixelName" in payload) {
+    const lines = [
+      `PXL Alert: ${payload.pixelName}`,
+      `IP: ${payload.ip}`,
+    ];
+    if (payload.location) lines.push(`Location: ${payload.location}`);
+    lines.push(
+      `Time: ${formatTime(payload.timestamp)}`,
+      `OS: ${payload.os}`,
+      `Opens: ${payload.totalOpens}`,
+    );
+    return lines.join("\n");
+  } else {
+    const lines = [
+      `PXL Link Click: ${payload.linkName}`,
+      `URL: ${payload.targetUrl}`,
+      `IP: ${payload.ip}`,
+    ];
+    if (payload.location) lines.push(`Location: ${payload.location}`);
+    lines.push(
+      `Time: ${formatTime(payload.timestamp)}`,
+      `Browser: ${payload.browser}`,
+      `OS: ${payload.os}`,
+      `Clicks: ${payload.totalClicks}`,
+    );
+    return lines.join("\n");
+  }
 }
 
 const senders: Record<string, ProviderSender> = {
@@ -53,9 +80,12 @@ const senders: Record<string, ProviderSender> = {
 
   ntfy: async (config, payload) => {
     const message = formatMessage(payload);
+    const title = "pixelName" in payload
+      ? `PXL Alert: ${payload.pixelName}`
+      : `PXL Link Click: ${payload.linkName}`;
     await fetch(config.url, {
       method: "POST",
-      headers: { Title: `PXL Alert: ${payload.pixelName}` },
+      headers: { Title: title },
       body: message,
     });
   },
@@ -93,7 +123,7 @@ const senders: Record<string, ProviderSender> = {
 export async function sendNotification(
   providerType: string,
   providerConfig: Record<string, any>,
-  payload: NotifyPayload
+  payload: NotifyPayload | LinkNotifyPayload
 ): Promise<void> {
   const sender = senders[providerType];
   if (!sender) {

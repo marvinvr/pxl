@@ -1,5 +1,6 @@
 import type { FC } from "hono/jsx";
 import { Layout } from "../layout";
+import { Btn } from "../button";
 
 interface ProviderFormProps {
   editing?: {
@@ -69,17 +70,12 @@ export const ProviderFormView: FC<ProviderFormProps> = ({ editing }) => {
               id="enabled"
               value="1"
               checked={editing ? !!editing.enabled : true}
-              class="rounded bg-white border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="rounded bg-white border-gray-300 text-gray-900 focus:ring-gray-500"
             />
             <label for="enabled" class="text-sm text-gray-600">Enabled</label>
           </div>
 
-          <button
-            type="submit"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors"
-          >
-            {isEdit ? "Save Changes" : "Create Provider"}
-          </button>
+          <Btn type="submit">{isEdit ? "Save Changes" : "Create Provider"}</Btn>
         </form>
       </div>
     </Layout>

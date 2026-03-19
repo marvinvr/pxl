@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { db } from "../../db/client";
-import { pixels, opens, providers } from "../../db/schema";
+import { pixels, opens, providers, ipAddresses } from "../../db/schema";
 import { eq, count, min, max, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { PixelListView } from "../views/pixels/list";
@@ -135,14 +135,16 @@ pixelRoutes.get("/:id", async (c) => {
     .select({
       id: opens.id,
       timestamp: opens.timestamp,
-      ip: opens.ip,
+      ipAddressId: ipAddresses.id,
+      ip: ipAddresses.ip,
       uaBrowser: opens.uaBrowser,
       uaOs: opens.uaOs,
       uaDevice: opens.uaDevice,
-      geoCountry: opens.geoCountry,
-      geoCity: opens.geoCity,
+      geoCountry: ipAddresses.geoCountry,
+      geoCity: ipAddresses.geoCity,
     })
     .from(opens)
+    .leftJoin(ipAddresses, eq(opens.ipAddressId, ipAddresses.id))
     .where(eq(opens.pixelId, id))
     .orderBy(desc(opens.timestamp));
 

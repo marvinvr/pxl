@@ -1,12 +1,11 @@
 import { Hono } from "hono";
 import { nanoid } from "nanoid";
 import { db } from "../db/client";
-import { pixels, opens, unmatchedRequests } from "../db/schema";
+import { pixels, opens, links, clicks, unmatchedRequests, providers } from "../db/schema";
 import { eq, count } from "drizzle-orm";
 import { parseUA } from "../services/ua";
-import { sendNotification, type NotifyPayload } from "../services/notify";
-import { lookupIp } from "../services/geo";
-import { providers } from "../db/schema";
+import { upsertIp, resolveGeo } from "../services/ip";
+import { sendNotification, type NotifyPayload, type LinkNotifyPayload } from "../services/notify";
 import type { Server } from "bun";
 
 // 1x1 transparent PNG (68 bytes)
@@ -124,7 +123,7 @@ trackerApp.get("/px/:filename", (c) => {
   // Grab everything we can about this request right now
   const req = collectRequestData(c);
 
-  // Fire and forget
+  // Fire and forget — response goes out immediately
   (async () => {
     try {
       let pixel = getCachedPixel(trackingId);
@@ -141,15 +140,15 @@ trackerApp.get("/px/:filename", (c) => {
       }
 
       if (pixel) {
+        const ipRow = upsertIp(req.ip);
         const ua = parseUA(req.userAgent);
-        const geo = await lookupIp(req.ip);
         const now = Date.now();
 
         await db.insert(opens).values({
           id: nanoid(),
           pixelId: pixel.id,
+          ipAddressId: ipRow.id,
           timestamp: now,
-          ip: req.ip,
           userAgent: req.userAgent,
           uaBrowser: ua.browser,
           uaOs: ua.os,
@@ -159,13 +158,11 @@ trackerApp.get("/px/:filename", (c) => {
           rawHeaders: req.rawHeaders,
           rawUrl: req.rawUrl,
           rawMethod: req.rawMethod,
-          geoCountry: geo.country,
-          geoCity: geo.city,
-          geoRegion: geo.region,
         });
 
-        // Check if notification should fire
-        if (pixel.providerId) {
+        // Geo + notification (best-effort, after data is persisted)
+        // Skip notifications for muted IPs
+        if (pixel.providerId && !ipRow.muted) {
           const providerRows = await db
             .select()
             .from(providers)
@@ -184,6 +181,7 @@ trackerApp.get("/px/:filename", (c) => {
             const isFirstOpen = totalOpens === 1;
 
             if (isFirstOpen || pixel.notifyOnEveryOpen) {
+              const geo = await resolveGeo(ipRow);
               const locationParts = [geo.city, geo.region, geo.country].filter(Boolean);
               const payload: NotifyPayload = {
                 pixelName: pixel.name,
@@ -203,13 +201,17 @@ trackerApp.get("/px/:filename", (c) => {
               );
             }
           }
+        } else {
+          // Still resolve geo in background so it's cached for next time
+          resolveGeo(ipRow).catch(() => {});
         }
       } else {
+        const ipRow = upsertIp(req.ip);
         await db.insert(unmatchedRequests).values({
           id: nanoid(),
           timestamp: Date.now(),
           requestedPath: `/px/${trackingId}.png`,
-          ip: req.ip,
+          ipAddressId: ipRow.id,
           userAgent: req.userAgent,
           referer: req.referer,
           rawHeaders: req.rawHeaders,
@@ -221,6 +223,142 @@ trackerApp.get("/px/:filename", (c) => {
   })();
 
   return c.body(TRANSPARENT_PIXEL, 200, PIXEL_HEADERS);
+});
+
+// Simple TTL cache for short code -> link lookups
+type LinkRow = typeof links.$inferSelect;
+const linkCache = new Map<string, { link: LinkRow; expiry: number }>();
+
+function getCachedLink(shortCode: string): LinkRow | null {
+  const cached = linkCache.get(shortCode);
+  if (cached && cached.expiry > Date.now()) {
+    return cached.link;
+  }
+  if (cached) linkCache.delete(shortCode);
+  return null;
+}
+
+function setCachedLink(shortCode: string, link: LinkRow): void {
+  linkCache.set(shortCode, { link, expiry: Date.now() + CACHE_TTL });
+  setTimeout(() => linkCache.delete(shortCode), CACHE_TTL);
+}
+
+trackerApp.get("/l/:shortCode", async (c) => {
+  const shortCode = c.req.param("shortCode");
+  if (!shortCode) return c.text("Not Found", 404);
+
+  const req = collectRequestData(c);
+
+  // Look up link
+  let link = getCachedLink(shortCode);
+  if (!link) {
+    const rows = await db
+      .select()
+      .from(links)
+      .where(eq(links.shortCode, shortCode))
+      .limit(1);
+    if (rows.length > 0) {
+      link = rows[0];
+      setCachedLink(shortCode, link);
+    }
+  }
+
+  if (!link) {
+    // Log as unmatched and 404
+    (async () => {
+      try {
+        const ipRow = upsertIp(req.ip);
+        await db.insert(unmatchedRequests).values({
+          id: nanoid(),
+          timestamp: Date.now(),
+          requestedPath: `/l/${shortCode}`,
+          ipAddressId: ipRow.id,
+          userAgent: req.userAgent,
+          referer: req.referer,
+          rawHeaders: req.rawHeaders,
+        });
+      } catch (err) {
+        console.error("Unmatched log error:", err);
+      }
+    })();
+    return c.text("Not Found", 404);
+  }
+
+  const targetUrl = link.targetUrl;
+
+  // Fire and forget the tracking
+  (async () => {
+    try {
+      const ipRow = upsertIp(req.ip);
+      const ua = parseUA(req.userAgent);
+      const now = Date.now();
+
+      await db.insert(clicks).values({
+        id: nanoid(),
+        linkId: link!.id,
+        ipAddressId: ipRow.id,
+        timestamp: now,
+        userAgent: req.userAgent,
+        uaBrowser: ua.browser,
+        uaOs: ua.os,
+        uaDevice: ua.device,
+        referer: req.referer,
+        acceptLanguage: req.acceptLanguage,
+        rawHeaders: req.rawHeaders,
+        rawUrl: req.rawUrl,
+        rawMethod: req.rawMethod,
+      });
+
+      // Skip notifications for muted IPs
+      if (link!.providerId && !ipRow.muted) {
+        const providerRows = await db
+          .select()
+          .from(providers)
+          .where(eq(providers.id, link!.providerId!))
+          .limit(1);
+
+        if (providerRows.length > 0 && providerRows[0].enabled) {
+          const provider = providerRows[0];
+
+          const clickCount = await db
+            .select({ count: count() })
+            .from(clicks)
+            .where(eq(clicks.linkId, link!.id));
+
+          const totalClicks = clickCount[0]?.count || 1;
+          const isFirstClick = totalClicks === 1;
+
+          if (isFirstClick || link!.notifyOnEveryClick) {
+            const geo = await resolveGeo(ipRow);
+            const locationParts = [geo.city, geo.region, geo.country].filter(Boolean);
+            const payload: LinkNotifyPayload = {
+              linkName: link!.name,
+              targetUrl: link!.targetUrl,
+              ip: req.ip,
+              location: locationParts.length > 0 ? locationParts.join(", ") : null,
+              browser: ua.browser || "Unknown",
+              os: ua.os || "Unknown",
+              totalClicks,
+              timestamp: new Date(now).toISOString(),
+            };
+
+            await sendNotification(
+              provider.type,
+              JSON.parse(provider.config),
+              payload
+            );
+          }
+        }
+      } else {
+        // Still resolve geo in background so it's cached for next time
+        resolveGeo(ipRow).catch(() => {});
+      }
+    } catch (err) {
+      console.error("Link tracker error:", err);
+    }
+  })();
+
+  return c.redirect(targetUrl, 302);
 });
 
 // Catch-all: 404 everything else, no logging

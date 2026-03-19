@@ -2,11 +2,11 @@ import type { FC } from "hono/jsx";
 import { Layout } from "../layout";
 import { IpLink } from "../ip-link";
 
-interface OpenDetailProps {
-  open: {
+interface ClickDetailProps {
+  click: {
     id: string;
-    pixelId: string;
-    pixelName: string;
+    linkId: string;
+    linkName: string;
     timestamp: number;
     ipId: number | null;
     ip: string | null;
@@ -23,33 +23,33 @@ interface OpenDetailProps {
     geoCity: string | null;
     geoRegion: string | null;
   };
-  openNumber: number;
+  clickNumber: number;
 }
 
-export const OpenDetailView: FC<OpenDetailProps> = ({ open, openNumber }) => {
+export const ClickDetailView: FC<ClickDetailProps> = ({ click, clickNumber }) => {
   let parsedHeaders: Record<string, string> = {};
   try {
-    if (open.rawHeaders) parsedHeaders = JSON.parse(open.rawHeaders);
+    if (click.rawHeaders) parsedHeaders = JSON.parse(click.rawHeaders);
   } catch {}
 
   return (
-    <Layout title={`Open #${openNumber}`}>
+    <Layout title={`Click #${clickNumber}`}>
       <div class="mb-8">
-        <a href={`/pixels/${open.pixelId}`} class="text-sm text-gray-500 hover:text-gray-900 transition-colors">
-          &larr; Back to {open.pixelName}
+        <a href={`/links/${click.linkId}`} class="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+          &larr; Back to {click.linkName}
         </a>
-        <h1 class="text-2xl font-bold mt-2">Open #{openNumber}</h1>
+        <h1 class="text-2xl font-bold mt-2">Click #{clickNumber}</h1>
         <p class="text-gray-500 mt-1">
-          {open.pixelName} &middot; {new Date(open.timestamp).toLocaleString()}
+          {click.linkName} &middot; {new Date(click.timestamp).toLocaleString()}
         </p>
       </div>
 
       <div class="space-y-6 max-w-3xl">
         {/* Context */}
         <Section title="Context">
-          <InfoRow label="Pixel" value={open.pixelName} />
-          <InfoRow label="Timestamp" value={new Date(open.timestamp).toLocaleString()} />
-          <InfoRow label="Open #" value={String(openNumber)} />
+          <InfoRow label="Link" value={click.linkName} />
+          <InfoRow label="Timestamp" value={new Date(click.timestamp).toLocaleString()} />
+          <InfoRow label="Click #" value={String(clickNumber)} />
         </Section>
 
         {/* Connection */}
@@ -57,20 +57,20 @@ export const OpenDetailView: FC<OpenDetailProps> = ({ open, openNumber }) => {
           <div class="flex flex-col sm:flex-row sm:items-start gap-1">
             <div class="text-sm font-mono text-gray-400 w-32 shrink-0">IP</div>
             <div class="text-sm font-mono text-gray-700">
-              <IpLink ipAddressId={open.ipId} ip={open.ip} stopPropagation={false} />
+              <IpLink ipAddressId={click.ipId} ip={click.ip} stopPropagation={false} />
             </div>
           </div>
-          <InfoRow label="Location" value={[open.geoCity, open.geoRegion, open.geoCountry].filter(Boolean).join(", ") || null} />
-          <InfoRow label="Referer" value={open.referer} />
+          <InfoRow label="Location" value={[click.geoCity, click.geoRegion, click.geoCountry].filter(Boolean).join(", ") || null} />
+          <InfoRow label="Referer" value={click.referer} />
         </Section>
 
         {/* Client */}
         <Section title="Client">
-          <InfoRow label="Browser" value={open.uaBrowser} />
-          <InfoRow label="OS" value={open.uaOs} />
-          <InfoRow label="Device" value={open.uaDevice} />
-          <InfoRow label="Accept-Language" value={open.acceptLanguage} />
-          <InfoRow label="User-Agent" value={open.userAgent} mono small />
+          <InfoRow label="Browser" value={click.uaBrowser} />
+          <InfoRow label="OS" value={click.uaOs} />
+          <InfoRow label="Device" value={click.uaDevice} />
+          <InfoRow label="Accept-Language" value={click.acceptLanguage} />
+          <InfoRow label="User-Agent" value={click.userAgent} mono small />
         </Section>
 
         {/* Raw Headers */}
@@ -89,8 +89,8 @@ export const OpenDetailView: FC<OpenDetailProps> = ({ open, openNumber }) => {
 
         {/* Raw Request */}
         <Section title="Raw Request">
-          <InfoRow label="Method" value={open.rawMethod} mono />
-          <InfoRow label="URL" value={open.rawUrl} mono small />
+          <InfoRow label="Method" value={click.rawMethod} mono />
+          <InfoRow label="URL" value={click.rawUrl} mono small />
         </Section>
       </div>
     </Layout>

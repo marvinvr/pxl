@@ -9,8 +9,9 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "hono": "^4",
     "drizzle-orm": "^0.39",
+    "hono": "^4",
+    "lucide": "^0.577.0",
     "nanoid": "^5",
     "ua-parser-js": "^2"
   },
