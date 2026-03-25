@@ -29,6 +29,8 @@ const PIXEL_HEADERS = {
 type PixelRow = typeof pixels.$inferSelect;
 const pixelCache = new Map<string, { pixel: PixelRow; expiry: number }>();
 const CACHE_TTL = 60_000; // 1 minute
+const NOTIFICATION_RATE_LIMIT_TTL = 3 * 60_000; // 3 minutes
+const notificationRateLimit = new Map<string, number>();
 
 function getCachedPixel(trackingId: string): PixelRow | null {
   const cached = pixelCache.get(trackingId);
@@ -42,6 +44,25 @@ function getCachedPixel(trackingId: string): PixelRow | null {
 function setCachedPixel(trackingId: string, pixel: PixelRow): void {
   pixelCache.set(trackingId, { pixel, expiry: Date.now() + CACHE_TTL });
   setTimeout(() => pixelCache.delete(trackingId), CACHE_TTL);
+}
+
+function shouldSendNotification(key: string): boolean {
+  const now = Date.now();
+  const expiry = notificationRateLimit.get(key);
+
+  if (expiry && expiry > now) {
+    return false;
+  }
+
+  notificationRateLimit.set(key, now + NOTIFICATION_RATE_LIMIT_TTL);
+  setTimeout(() => {
+    const currentExpiry = notificationRateLimit.get(key);
+    if (currentExpiry && currentExpiry <= Date.now()) {
+      notificationRateLimit.delete(key);
+    }
+  }, NOTIFICATION_RATE_LIMIT_TTL);
+
+  return true;
 }
 
 function getConnectionInfo(c: any): { address: string; family: string; port: number } | null {
@@ -179,8 +200,11 @@ trackerApp.get("/px/:filename", (c) => {
 
             const totalOpens = openCount[0]?.count || 1;
             const isFirstOpen = totalOpens === 1;
+            const shouldNotify =
+              isFirstOpen ||
+              (pixel.notifyOnEveryOpen && shouldSendNotification(`pixel:${pixel.id}:${req.ip}`));
 
-            if (isFirstOpen || pixel.notifyOnEveryOpen) {
+            if (shouldNotify) {
               const geo = await resolveGeo(ipRow);
               const locationParts = [geo.city, geo.region, geo.country].filter(Boolean);
               const payload: NotifyPayload = {
@@ -327,8 +351,11 @@ trackerApp.get("/l/:shortCode", async (c) => {
 
           const totalClicks = clickCount[0]?.count || 1;
           const isFirstClick = totalClicks === 1;
+          const shouldNotify =
+            isFirstClick ||
+            (link!.notifyOnEveryClick && shouldSendNotification(`link:${link!.id}:${req.ip}`));
 
-          if (isFirstClick || link!.notifyOnEveryClick) {
+          if (shouldNotify) {
             const geo = await resolveGeo(ipRow);
             const locationParts = [geo.city, geo.region, geo.country].filter(Boolean);
             const payload: LinkNotifyPayload = {

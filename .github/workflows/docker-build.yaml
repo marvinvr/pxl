@@ -2,8 +2,8 @@ name: Build and Push Docker Image
 
 on:
   push:
-    tags:
-      - '*'
+    branches:
+      - main
 
 env:
   REGISTRY: ghcr.io
@@ -11,24 +11,17 @@ env:
 
 jobs:
   build:
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
 
-    strategy:
-      matrix:
-        include:
-          - runner: ubuntu-latest
-            platform: linux/amd64
-            arch: amd64
-          - runner: ubuntu-24.04-arm
-            platform: linux/arm64
-            arch: arm64
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -40,96 +33,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine if prerelease
-        id: release-type
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          if [[ "$TAG" == *-* ]]; then
-            echo "prerelease=true" >> $GITHUB_OUTPUT
-            CHANNEL=$(echo "$TAG" | sed 's/^v\?[0-9]*\.[0-9]*\.[0-9]*-//' | sed 's/\..*//')
-            echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
-          else
-            echo "prerelease=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ steps.release-type.outputs.prerelease == 'false' }}
-            type=semver,pattern={{major}},enable=${{ steps.release-type.outputs.prerelease == 'false' }}
-            type=raw,value=latest,enable=${{ steps.release-type.outputs.prerelease == 'false' }}
-            type=raw,value=${{ steps.release-type.outputs.channel }},enable=${{ steps.release-type.outputs.prerelease == 'true' }}
-          flavor: |
-            latest=false
-
-      - name: Prepare tags with architecture suffix
-        id: arch-tags
-        run: |
-          TAGS="${{ steps.meta.outputs.tags }}"
-          ARCH_TAGS=$(echo "$TAGS" | sed "s/$/-${{ matrix.arch }}/")
-          echo "tags<<EOF" >> $GITHUB_OUTPUT
-          echo "$ARCH_TAGS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.arch-tags.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  manifest:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Determine if prerelease
-        id: release-type
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          if [[ "$TAG" == *-* ]]; then
-            echo "prerelease=true" >> $GITHUB_OUTPUT
-            CHANNEL=$(echo "$TAG" | sed 's/^v\?[0-9]*\.[0-9]*\.[0-9]*-//' | sed 's/\..*//')
-            echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
-          else
-            echo "prerelease=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ steps.release-type.outputs.prerelease == 'false' }}
-            type=semver,pattern={{major}},enable=${{ steps.release-type.outputs.prerelease == 'false' }}
-            type=raw,value=latest,enable=${{ steps.release-type.outputs.prerelease == 'false' }}
-            type=raw,value=${{ steps.release-type.outputs.channel }},enable=${{ steps.release-type.outputs.prerelease == 'true' }}
-
-      - name: Create and push manifest
-        run: |
-          TAGS="${{ steps.meta.outputs.tags }}"
-          for TAG in $TAGS; do
-            docker buildx imagetools create -t $TAG \
-              $TAG-amd64 \
-              $TAG-arm64
-          done
