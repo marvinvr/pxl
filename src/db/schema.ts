@@ -81,6 +81,7 @@ export const links = sqliteTable(
     providerId: text("provider_id").references(() => providers.id, { onDelete: "set null" }),
     notes: text("notes"),
     notifyOnEveryClick: integer("notify_on_every_click").default(1),
+    hidePreviewMetadata: integer("hide_preview_metadata").notNull().default(0),
     createdAt: integer("created_at").notNull(),
   },
   (table) => [

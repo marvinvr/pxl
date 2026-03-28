@@ -10,6 +10,7 @@ interface EditLinkProps {
     notes: string | null;
     providerId: string | null;
     notifyOnEveryClick: number | null;
+    hidePreviewMetadata: number;
   };
   providers: { id: string; name: string }[];
 }
@@ -85,6 +86,25 @@ export const EditLinkView: FC<EditLinkProps> = ({ link, providers }) => {
             <label for="notifyOnEveryClick" class="text-sm text-gray-600">
               Notify on every click (not just the first)
             </label>
+          </div>
+
+          <div>
+            <div class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="hidePreviewMetadata"
+                id="hidePreviewMetadata"
+                value="1"
+                checked={!!link.hidePreviewMetadata}
+                class="rounded bg-white border-gray-300 text-gray-900 focus:ring-gray-500"
+              />
+              <label for="hidePreviewMetadata" class="text-sm text-gray-600">
+                Hide target preview metadata
+              </label>
+            </div>
+            <p class="mt-1 text-xs text-gray-500">
+              Known unfurl bots get a neutral page instead of the target title, description, and OG image.
+            </p>
           </div>
 
           <Btn type="submit">Save Changes</Btn>

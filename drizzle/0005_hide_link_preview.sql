@@ -1,0 +1,1 @@
+ALTER TABLE `links` ADD `hide_preview_metadata` integer NOT NULL DEFAULT 0;

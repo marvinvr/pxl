@@ -13,6 +13,7 @@ interface LinkDetailProps {
     name: string;
     notes: string | null;
     notifyOnEveryClick: number | null;
+    hidePreviewMetadata: number;
     createdAt: number;
     providerName: string | null;
   };
@@ -57,6 +58,10 @@ export const LinkDetailView: FC<LinkDetailProps> = ({ link, clicks }) => {
           <div>
             <div class="text-sm text-gray-500 mb-1">Notify</div>
             <div>{link.notifyOnEveryClick ? "Every click" : "First click only"}</div>
+          </div>
+          <div>
+            <div class="text-sm text-gray-500 mb-1">Preview Metadata</div>
+            <div>{link.hidePreviewMetadata ? "Hidden from unfurls" : "Forward target metadata"}</div>
           </div>
           <div>
             <div class="text-sm text-gray-500 mb-1">Created</div>

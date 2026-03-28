@@ -19,6 +19,7 @@ linkRoutes.get("/", async (c) => {
       shortCode: links.shortCode,
       targetUrl: links.targetUrl,
       name: links.name,
+      hidePreviewMetadata: links.hidePreviewMetadata,
       createdAt: links.createdAt,
     })
     .from(links)
@@ -83,6 +84,7 @@ linkRoutes.post("/", async (c) => {
     providerId: body.providerId ? String(body.providerId) : null,
     notes: body.notes ? String(body.notes) : null,
     notifyOnEveryClick: body.notifyOnEveryClick ? 1 : 0,
+    hidePreviewMetadata: body.hidePreviewMetadata ? 1 : 0,
     createdAt: now,
   });
 
@@ -121,6 +123,7 @@ linkRoutes.post("/quick", async (c) => {
     providerId: body.providerId ? String(body.providerId) : null,
     notes: null,
     notifyOnEveryClick: body.notifyOnEveryClick ? 1 : 0,
+    hidePreviewMetadata: body.hidePreviewMetadata ? 1 : 0,
     createdAt: now,
   });
 
@@ -174,6 +177,7 @@ linkRoutes.post("/:id/edit", async (c) => {
       providerId: body.providerId ? String(body.providerId) : null,
       notes: body.notes ? String(body.notes) : null,
       notifyOnEveryClick: body.notifyOnEveryClick ? 1 : 0,
+      hidePreviewMetadata: body.hidePreviewMetadata ? 1 : 0,
     })
     .where(eq(links.id, id));
 

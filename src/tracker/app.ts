@@ -267,10 +267,55 @@ function setCachedLink(shortCode: string, link: LinkRow): void {
   setTimeout(() => linkCache.delete(shortCode), CACHE_TTL);
 }
 
-trackerApp.get("/l/:shortCode", async (c) => {
+const PREVIEW_BOT_PATTERNS = [
+  /slackbot/i,
+  /discordbot/i,
+  /twitterbot/i,
+  /facebookexternalhit/i,
+  /meta-externalagent/i,
+  /linkedinbot/i,
+  /whatsapp/i,
+  /telegrambot/i,
+  /skypeuripreview/i,
+  /teamsbot/i,
+  /mastodon/i,
+  /mattermost/i,
+];
+
+const PREVIEW_RESPONSE_HEADERS = {
+  "Content-Type": "text/html; charset=UTF-8",
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+  Pragma: "no-cache",
+  Expires: "0",
+  "X-Robots-Tag": "noindex, nofollow, noarchive, nosnippet, noimageindex",
+};
+
+function isPreviewRequest(c: any): boolean {
+  const ua = c.req.header("user-agent") || "";
+  const purpose = c.req.header("purpose") || c.req.header("x-purpose") || c.req.header("sec-purpose") || "";
+
+  return (
+    PREVIEW_BOT_PATTERNS.some((pattern) => pattern.test(ua)) ||
+    /preview|prefetch/i.test(purpose)
+  );
+}
+
+function buildPreviewShieldHtml(): string {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Open Link</title>
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex" />
+  </head>
+  <body></body>
+</html>`;
+}
+
+async function handleTrackedLink(c: any) {
   const shortCode = c.req.param("shortCode");
   if (!shortCode) return c.text("Not Found", 404);
-
   const req = collectRequestData(c);
 
   // Look up link
@@ -306,6 +351,17 @@ trackerApp.get("/l/:shortCode", async (c) => {
       }
     })();
     return c.text("Not Found", 404);
+  }
+
+  if (link.hidePreviewMetadata && isPreviewRequest(c)) {
+    if (c.req.method === "HEAD") {
+      return new Response(null, { status: 200, headers: PREVIEW_RESPONSE_HEADERS });
+    }
+
+    return new Response(buildPreviewShieldHtml(), {
+      status: 200,
+      headers: PREVIEW_RESPONSE_HEADERS,
+    });
   }
 
   const targetUrl = link.targetUrl;
@@ -386,7 +442,10 @@ trackerApp.get("/l/:shortCode", async (c) => {
   })();
 
   return c.redirect(targetUrl, 302);
-});
+}
+
+trackerApp.get("/l/:shortCode", handleTrackedLink);
+trackerApp.head("/l/:shortCode", handleTrackedLink);
 
 // Catch-all: 404 everything else, no logging
 trackerApp.all("*", (c) => {

@@ -70,6 +70,15 @@ export const DashboardView: FC<DashboardProps> = (props) => {
             />
             <Btn type="submit" class="shrink-0">Shorten</Btn>
           </div>
+          <label class="mt-3 flex items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              name="hidePreviewMetadata"
+              value="1"
+              class="rounded bg-white border-gray-300 text-gray-900 focus:ring-gray-500"
+            />
+            Hide target preview metadata for link unfurls
+          </label>
         </form>
         <div id="quick-shorten-result"></div>
       </div>
