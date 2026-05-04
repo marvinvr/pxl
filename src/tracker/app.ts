@@ -445,7 +445,7 @@ async function handleTrackedLink(c: any) {
 }
 
 trackerApp.get("/l/:shortCode", handleTrackedLink);
-trackerApp.head("/l/:shortCode", handleTrackedLink);
+trackerApp.on("HEAD", "/l/:shortCode", handleTrackedLink);
 
 // Catch-all: 404 everything else, no logging
 trackerApp.all("*", (c) => {
