@@ -16,7 +16,7 @@
     "ua-parser-js": "^2"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.30",
+    "drizzle-kit": "^0.31.0",
     "@types/bun": "latest"
   }
 }
